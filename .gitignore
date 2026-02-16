@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+news-data/
+*.db
+*.log
+*.db-shm
+*.db-wal
+.DS_Store
+.vscode/
+.idea/
+cache/
+*.sqlite
+*.sqlite3
+build/
