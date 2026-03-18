@@ -133,16 +133,9 @@ export function IntelligenceDashboard({ clusters }: IntelligenceDashboardProps) 
   }
 
   return (
-    <section data-section="causal" className="space-y-8">
-      {/* Section Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-gray-800 dark:text-neutral-200">
-          News Analysis Overview
-        </h2>
-        <span className="text-xs text-gray-400">
-          Based on {totalArticles} articles
-        </span>
-      </div>
+    <section data-section="causal" className="space-y-6">
+      {/* Article count caption */}
+      <p className="text-xs text-gray-400">Based on {totalArticles} articles across {sortedClusters.length} clusters</p>
 
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-3 gap-4">

@@ -223,6 +223,13 @@ class IntelligenceStorage {
     console.log('[Storage] Schema migrations complete');
   }
 
+  /**
+   * Get the raw database instance for advanced queries
+   */
+  getDb(): Database.Database {
+    return this.db;
+  }
+
   // ===========================================================================
   // ARTICLE OPERATIONS
   // ===========================================================================

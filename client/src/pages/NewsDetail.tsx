@@ -72,7 +72,7 @@ export default function NewsDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-neutral-900">
+      <div className="min-h-screen bg-white dark:bg-neutral-950">
         <Navigation name={content?.profile?.name || "Portfolio"} />
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="flex items-center justify-center">
@@ -88,7 +88,7 @@ export default function NewsDetail() {
 
   if (!newsDay) {
     return (
-      <div className="min-h-screen bg-white dark:bg-neutral-900">
+      <div className="min-h-screen bg-white dark:bg-neutral-950">
         <Navigation name={content?.profile?.name || "Portfolio"} />
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center space-y-4">
@@ -110,7 +110,7 @@ export default function NewsDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-900">
+    <div className="min-h-screen bg-white dark:bg-neutral-950">
       <Helmet>
         <title>Tech Briefing: {newsDay.date} | {content?.profile?.name || "Portfolio"}</title>
         <meta

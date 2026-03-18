@@ -306,7 +306,7 @@ export const DEFAULT_PIPELINE_CONFIG: PipelineConfig = {
   cacheEnabled: true,
   cacheTtlMs: 24 * 60 * 60 * 1000, // 24 hours
   retentionDays: 365,
-  enableSupabaseBackup: false,
+  enableSupabaseBackup: true,
 };
 
 // =============================================================================

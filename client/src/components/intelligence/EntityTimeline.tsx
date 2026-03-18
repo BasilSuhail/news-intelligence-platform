@@ -125,16 +125,11 @@ export function EntityTimeline() {
   }));
 
   return (
-    <section className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-lg font-medium text-gray-800 dark:text-neutral-200">
-          Entity Sentiment Tracker
-        </h2>
-        <p className="text-xs text-gray-400 mt-1">
-          How sentiment around key entities evolves over time
-        </p>
-      </div>
+    <section className="space-y-4">
+      {/* Subtitle */}
+      <p className="text-xs text-gray-400">
+        How sentiment around key entities evolves over time
+      </p>
 
       {/* Entity Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
@@ -151,11 +146,10 @@ export function EntityTimeline() {
               onClick={() =>
                 setSelectedEntity(isSelected ? null : entity.entity)
               }
-              className={`p-3 rounded-xl border transition-all text-left ${
-                isSelected
+              className={`p-3 rounded-xl border transition-all text-left ${isSelected
                   ? "border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/20 ring-1 ring-violet-200 dark:ring-violet-800"
                   : "border-gray-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-gray-200 dark:hover:border-neutral-700"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Icon className={`w-3 h-3 ${iconColor}`} />

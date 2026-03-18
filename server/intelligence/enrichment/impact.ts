@@ -7,8 +7,71 @@ import {
  * Market Intelligence - Impact Scoring Engine
  * 
  * Implements the formula from Phase 3:
- * Impact = (|Sentiment| × 0.4) + (ClusterSize × 0.3) + (SourceWeight × 0.2) + (Recency × 0.1)
+ * Impact = (|Sentiment| × w1) + (ClusterSize × w2) + (SourceWeight × w3) + (Recency × w4)
+ * 
+ * Weights are now dynamically loaded from optimized_weights table when available.
  */
+
+// Cached optimized weights (loaded lazily)
+let cachedOptimizedWeights: { sentiment: number; cluster: number; source: number; recency: number } | null = null;
+let lastWeightCheck = 0;
+const WEIGHT_CHECK_INTERVAL_MS = 60 * 60 * 1000; // Re-check every hour
+
+function getActiveWeights(): { sentiment: number; cluster: number; source: number; recency: number } {
+    const defaults = { sentiment: 0.4, cluster: 0.3, source: 0.2, recency: 0.1 };
+
+    // Only check periodically to avoid constant DB queries
+    const now = Date.now();
+    if (now - lastWeightCheck < WEIGHT_CHECK_INTERVAL_MS && cachedOptimizedWeights !== null) {
+        return cachedOptimizedWeights;
+    }
+
+    try {
+        // Lazy import to avoid circular dependency
+        const { storage } = require('../core/storage');
+        const db = storage.getDb();
+
+        const row = db.prepare(
+            'SELECT * FROM optimized_weights ORDER BY calculated_at DESC LIMIT 1'
+        ).get() as any;
+
+        lastWeightCheck = now;
+
+        if (!row) {
+            console.log('[Impact] Using default weights (no optimization data)');
+            cachedOptimizedWeights = defaults;
+            return defaults;
+        }
+
+        // Check if less than 7 days old
+        const calculatedAt = new Date(row.calculated_at);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        if (calculatedAt < sevenDaysAgo) {
+            console.log('[Impact] Using default weights (optimization data expired)');
+            cachedOptimizedWeights = defaults;
+            return defaults;
+        }
+
+        const optimized = {
+            sentiment: row.sentiment_weight,
+            cluster: row.cluster_weight,
+            source: row.source_weight,
+            recency: row.recency_weight
+        };
+
+        console.log(`[Impact] Using optimized weights (r=${row.pearson_correlation.toFixed(4)})`);
+        cachedOptimizedWeights = optimized;
+        return optimized;
+    } catch (err: any) {
+        // Table might not exist yet on first run
+        lastWeightCheck = now;
+        cachedOptimizedWeights = defaults;
+        return defaults;
+    }
+}
+
 export class ImpactEngine {
     // Source Weights Tier List
     private static readonly SOURCE_WEIGHTS: Record<string, number> = {
@@ -44,12 +107,7 @@ export class ImpactEngine {
         factors: ImpactFactors,
         sourceId: string = 'default'
     ): number {
-        const weights = {
-            sentiment: 0.4,
-            cluster: 0.3,
-            source: 0.2,
-            recency: 0.1
-        };
+        const weights = getActiveWeights();
 
         // Normalize source weight to 0-100 scale (1.3 -> 100, 0.7 -> 0)
         const rawSourceWeight = this.SOURCE_WEIGHTS[sourceId] || this.SOURCE_WEIGHTS['default'];
@@ -82,3 +140,4 @@ export class ImpactEngine {
         return Math.min(100, (size / 20) * 100);
     }
 }
+

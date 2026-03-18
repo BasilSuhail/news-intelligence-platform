@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
-import { RefreshCw, ArrowLeft, ArrowRight, Activity, ChevronDown } from "lucide-react";
+import { RefreshCw, ArrowLeft, ArrowRight, Activity, ChevronDown, Github } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { ScrollIndicator } from "@/components/ScrollIndicator";
@@ -148,7 +148,7 @@ export default function News() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-neutral-900 flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-neutral-950 flex items-center justify-center">
         <div className="animate-spin inline-block size-6 border-[3px] border-current border-t-transparent text-gray-400 rounded-full dark:text-neutral-500" role="status" aria-label="loading">
           <span className="sr-only">Loading...</span>
         </div>
@@ -157,7 +157,7 @@ export default function News() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-900">
+    <div className="min-h-screen bg-white dark:bg-neutral-950">
       <ScrollIndicator sections={newsSections} />
       <Navigation name={content?.profile?.name || "Portfolio"} />
 
@@ -179,14 +179,36 @@ export default function News() {
             </p>
           </div>
 
-          {/* Action Buttons - Liquid Glass Preserved */}
+          {/* Action Buttons - Intelligence Button Highlighted */}
           <div className="flex items-center gap-2">
+            {/* Intelligence Button - HIGHLIGHTED with color gradient */}
             <Link href="/market-terminal">
-              <LiquidGlassButton size="sm">
-                <Activity className="size-4" />
-                Intelligence
-              </LiquidGlassButton>
+              <button className="group relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg">
+                {/* Gradient background */}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 dark:from-blue-500 dark:via-purple-500 dark:to-indigo-500"></div>
+
+                {/* Glass overlay with shimmer */}
+                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                {/* Content */}
+                <Activity className="size-4 relative z-10 text-white" />
+                <span className="relative z-10 text-white">Intelligence</span>
+              </button>
             </Link>
+
+            {/* GitHub Button */}
+            <a
+              href="https://github.com/BasilSuhail/news-intelligence-platform"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <LiquidGlassButton size="sm">
+                <Github className="size-4" />
+                GitHub
+              </LiquidGlassButton>
+            </a>
+
+            {/* Sync Button */}
             <LiquidGlassButton
               onClick={handleRefresh}
               disabled={refreshing}

@@ -15,6 +15,7 @@ import {
   BarChart3,
   RefreshCw,
   AlertCircle,
+  Sliders,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -39,6 +40,21 @@ interface ValidationResult {
   calculatedAt: string;
   isEmpty?: boolean;
   message?: string;
+}
+
+interface WeightInfo {
+  sentimentWeight: number;
+  clusterWeight: number;
+  sourceWeight: number;
+  recencyWeight: number;
+  pearsonCorrelation?: number;
+}
+
+interface OptimizeResult {
+  best: WeightInfo & { pearsonCorrelation: number; spearmanCorrelation: number };
+  top5: Array<WeightInfo & { pearsonCorrelation: number }>;
+  defaultCorrelation: number;
+  improvement: string;
 }
 
 function interpretCorrelation(r: number): { text: string; color: string } {
@@ -68,6 +84,12 @@ export function HindsightValidator() {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
 
+  // Weight optimization state
+  const [currentWeights, setCurrentWeights] = useState<WeightInfo | null>(null);
+  const [isOptimized, setIsOptimized] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizeResult, setOptimizeResult] = useState<OptimizeResult | null>(null);
+
   useEffect(() => {
     const fetchBacktest = async () => {
       try {
@@ -82,7 +104,22 @@ export function HindsightValidator() {
         setLoading(false);
       }
     };
+
+    const fetchWeights = async () => {
+      try {
+        const res = await fetch("/api/intelligence/current-weights");
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentWeights(data.weights);
+          setIsOptimized(data.isOptimized);
+        }
+      } catch (err) {
+        console.error("Failed to fetch weights:", err);
+      }
+    };
+
     fetchBacktest();
+    fetchWeights();
   }, []);
 
   const runBacktest = async () => {
@@ -97,6 +134,23 @@ export function HindsightValidator() {
       console.error("Failed to run backtest:", err);
     } finally {
       setRunning(false);
+    }
+  };
+
+  const runOptimization = async () => {
+    setOptimizing(true);
+    try {
+      const res = await fetch("/api/intelligence/optimize-weights?days=30");
+      if (res.ok) {
+        const data = await res.json();
+        setOptimizeResult(data);
+        setCurrentWeights(data.best);
+        setIsOptimized(true);
+      }
+    } catch (err) {
+      console.error("Failed to optimize weights:", err);
+    } finally {
+      setOptimizing(false);
     }
   };
 
@@ -116,25 +170,18 @@ export function HindsightValidator() {
   // Scatter data for the chart
   const scatterData = hasData
     ? result.dataPoints.map(dp => ({
-        sentiment: dp.sentimentScore,
-        return: dp.marketReturn,
-        match: dp.directionMatch,
-        date: dp.date,
-      }))
+      sentiment: dp.sentimentScore,
+      return: dp.marketReturn,
+      match: dp.directionMatch,
+      date: dp.date,
+    }))
     : [];
 
   return (
-    <section className="space-y-6">
-      {/* Header */}
+    <section className="space-y-5">
+      {/* Sub-header row */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-medium text-gray-800 dark:text-neutral-200">
-            Hindsight Validator
-          </h2>
-          <p className="text-xs text-gray-400 mt-1">
-            Does our sentiment actually predict market moves?
-          </p>
-        </div>
+        <p className="text-xs text-gray-400">Does our sentiment actually predict market moves?</p>
         <button
           onClick={runBacktest}
           disabled={running}
@@ -313,6 +360,71 @@ export function HindsightValidator() {
             </div>
           </div>
 
+          {/* Weight Optimization Section */}
+          <div className="p-5 rounded-xl border border-gray-100 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-violet-500" />
+                <h3 className="text-sm font-medium text-gray-700 dark:text-neutral-300">
+                  Weight Optimization
+                </h3>
+                {isOptimized && (
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    Optimized
+                  </Badge>
+                )}
+              </div>
+              <button
+                onClick={runOptimization}
+                disabled={optimizing}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-violet-200 dark:border-violet-800 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors disabled:opacity-50"
+              >
+                <Sliders className={`w-3 h-3 ${optimizing ? "animate-pulse" : ""}`} />
+                {optimizing ? "Optimizing..." : "Optimize Weights"}
+              </button>
+            </div>
+
+            {/* Current Weights Table */}
+            {currentWeights && (
+              <div className="overflow-hidden rounded-lg border border-gray-100 dark:border-neutral-800 mb-4">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-neutral-800/50">
+                      <th className="px-3 py-2 text-left text-gray-500 dark:text-neutral-500 font-medium">Factor</th>
+                      <th className="px-3 py-2 text-right text-gray-500 dark:text-neutral-500 font-medium">Weight</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-neutral-800">
+                    <tr><td className="px-3 py-1.5 text-gray-700 dark:text-neutral-300">Sentiment</td><td className="px-3 py-1.5 text-right text-gray-800 dark:text-neutral-200 font-mono">{currentWeights.sentimentWeight}</td></tr>
+                    <tr><td className="px-3 py-1.5 text-gray-700 dark:text-neutral-300">Cluster Size</td><td className="px-3 py-1.5 text-right text-gray-800 dark:text-neutral-200 font-mono">{currentWeights.clusterWeight}</td></tr>
+                    <tr><td className="px-3 py-1.5 text-gray-700 dark:text-neutral-300">Source Weight</td><td className="px-3 py-1.5 text-right text-gray-800 dark:text-neutral-200 font-mono">{currentWeights.sourceWeight}</td></tr>
+                    <tr><td className="px-3 py-1.5 text-gray-700 dark:text-neutral-300">Recency</td><td className="px-3 py-1.5 text-right text-gray-800 dark:text-neutral-200 font-mono">{currentWeights.recencyWeight}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Optimization Results */}
+            {optimizeResult && (
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800">
+                  <p className="text-xs text-violet-700 dark:text-violet-300 font-medium mb-1">
+                    Best weights found: sentiment={optimizeResult.best.sentimentWeight}, cluster={optimizeResult.best.clusterWeight}, source={optimizeResult.best.sourceWeight}, recency={optimizeResult.best.recencyWeight} (r={optimizeResult.best.pearsonCorrelation.toFixed(4)})
+                  </p>
+                  <p className="text-xs text-violet-600 dark:text-violet-400">
+                    {optimizeResult.improvement}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!currentWeights && !optimizeResult && (
+              <p className="text-xs text-gray-400 dark:text-neutral-500">
+                Click "Optimize Weights" to find the best impact score weights using grid search against market returns.
+              </p>
+            )}
+          </div>
+
           {/* Methodology Note */}
           <div className="p-4 rounded-xl bg-gray-50 dark:bg-neutral-800/50 border border-gray-100 dark:border-neutral-800">
             <p className="text-xs text-gray-500 dark:text-neutral-400 leading-relaxed">
@@ -320,6 +432,7 @@ export function HindsightValidator() {
               score is compared to the next trading day's S&P 500 (SPY) return. Direction accuracy
               measures how often our sentiment polarity matched the market direction. Pearson
               measures linear correlation; Spearman measures rank correlation (more robust to outliers).
+              Weight optimization uses grid search across ~100 valid weight combinations to maximize correlation.
             </p>
           </div>
         </>
@@ -327,3 +440,4 @@ export function HindsightValidator() {
     </section>
   );
 }
+

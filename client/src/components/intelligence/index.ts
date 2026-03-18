@@ -10,3 +10,5 @@ export { EntityTimeline } from "./EntityTimeline";
 export { AnomalyBanner } from "./AnomalyBanner";
 export { NarrativeTimeline } from "./NarrativeTimeline";
 export { ExportBriefing } from "./ExportBriefing";
+export { TodaySignal } from "./TodaySignal";
+export { WeeklyScorecard } from "./WeeklyScorecard";
