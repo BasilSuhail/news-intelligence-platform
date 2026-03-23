@@ -246,51 +246,60 @@ Strategic roadmap based on web research, academic literature, market analysis, a
 server/intelligence/
 ├── core/
 │   ├── types.ts         ✅
-│   ├── storage.ts       ✅ SQLite layer
+│   ├── storage.ts       ✅ SQLite layer (+ getDb())
 │   ├── cache.ts         ✅ Idempotent caching
-│   └── pipeline.ts      ✅ Main orchestrator
+│   ├── pipeline.ts      ✅ Main orchestrator (+ health monitoring)
+│   └── health.ts        ✅ Pipeline step tracking
 ├── ingestion/
 │   ├── providers/
 │   │   ├── base.provider.ts    ✅
 │   │   ├── newsapi.provider.ts ✅
-│   │   └── rss.provider.ts     ✅
+│   │   ├── rss.provider.ts     ✅
+│   │   └── gdelt.provider.ts   ✅
 │   └── collector.ts     ✅
 ├── enrichment/
 │   ├── sentiment.ts     ✅ Hybrid BERT/Dictionary
 │   ├── bert-sentiment.ts ✅ Local BERT engine
 │   ├── ner.ts           ✅ Entity Recognition
-│   ├── impact.ts        ✅
+│   ├── impact.ts        ✅ Dynamic weights from optimizer
 │   ├── geotags.ts       ✅
 │   └── pipeline.ts      ✅ Updated for async BERT
 ├── clustering/
 │   ├── tfidf.ts         ✅
-│   ├── confidence.ts    ✅ Cross-source confidence scoring
+│   ├── embeddings.ts    ✅ Semantic embeddings
+│   ├── semantic-cluster.ts ✅
+│   ├── confidence.ts    ✅ Cross-source confidence
+│   ├── narrative.ts     ✅ AND-based matching + status
 │   └── pipeline.ts      ✅
 ├── synthesis/
 │   ├── gemini.ts        ✅
-│   └── briefing.ts      ✅
+│   ├── briefing.ts      ✅
+│   └── signal.ts        ✅ Rule-based daily signal
 ├── validation/
 │   ├── market-data.ts   ✅ Finnhub API client
 │   ├── correlation.ts   ✅ Pearson + Spearman engine
-│   └── backtest.ts      ✅ Hindsight validator orchestrator
-└── metrics/
-    ├── gpr.ts           ✅
-    ├── feedback.ts      ✅
-    ├── entity-tracker.ts ✅ Entity sentiment aggregation
-    └── anomaly.ts       ✅ Volume anomaly detection
+│   ├── backtest.ts      ✅ Hindsight validator orchestrator
+│   ├── weight-optimizer.ts ✅ Grid search optimizer
+│   └── scorecard.ts     ✅ Weekly accuracy reports
+├── metrics/
+│   ├── gpr.ts           ✅
+│   ├── feedback.ts      ✅
+│   ├── entity-tracker.ts ✅
+│   └── anomaly.ts       ✅
+└── export/
+    ├── pdf-briefing.ts  ✅
+    └── email-digest.ts  ✅
 
 client/src/components/intelligence/
-├── CausalFlowGraph.tsx      ✅ (legacy)
-├── CausalIntelligence.tsx   ✅ (legacy)
-├── CustomEdges.tsx          ✅ (legacy)
-├── CustomNodes.tsx          ✅ (legacy)
-├── EntityPanel.tsx          ✅ (legacy)
-├── IntelligenceOverview.tsx ✅
-├── IntelligenceDashboard.tsx ✅ (v2)
-├── HindsightValidator.tsx   ✅ Backtest scatter chart + metrics
-├── EntityTimeline.tsx       ✅ Entity sentiment line charts
-├── AnomalyBanner.tsx        ✅ Volume anomaly alerts
-└── index.ts                  ✅
+├── IntelligenceDashboard.tsx ✅
+├── HindsightValidator.tsx   ✅ + weight optimization section
+├── EntityTimeline.tsx       ✅
+├── AnomalyBanner.tsx        ✅
+├── NarrativeTimeline.tsx    ✅ Active/resolved split
+├── ExportBriefing.tsx       ✅
+├── TodaySignal.tsx          ✅ Actionable signal
+├── WeeklyScorecard.tsx      ✅ Letter-grade accuracy
+└── index.ts                 ✅
 ```
 
 ---
@@ -303,13 +312,70 @@ client/src/components/intelligence/
 | `/api/intelligence/gpr` | GET | ✅ | Get GPR history |
 | `/api/intelligence/clusters` | GET | ✅ | Get clusters |
 | `/api/intelligence/run` | POST | ✅ | Run pipeline |
+| `/api/intelligence/signal` | GET | ✅ | Today's actionable signal |
+| `/api/intelligence/scorecard` | GET | ✅ | Weekly accuracy scorecard |
+| `/api/intelligence/scorecard/history` | GET | ✅ | Scorecard history |
+| `/api/intelligence/backtest` | GET | ✅ | Hindsight validation results |
+| `/api/intelligence/backtest/run` | GET | ✅ | Trigger fresh backtest |
+| `/api/intelligence/optimize-weights` | GET | ✅ | Grid search weight optimization |
+| `/api/intelligence/current-weights` | GET | ✅ | Active impact weights |
+| `/api/intelligence/health` | GET | ✅ | Pipeline health summary |
+| `/api/intelligence/market-data` | GET | ✅ | Cached market data |
+| `/api/intelligence/anomalies` | GET | ✅ | Volume anomaly alerts |
+| `/api/intelligence/narratives` | GET | ✅ | Narrative threads |
+| `/api/intelligence/entity/:name` | GET | ✅ | Entity sentiment timeline |
+| `/api/intelligence/entities/top` | GET | ✅ | Top entities by mentions |
+| `/api/intelligence/export/pdf` | GET | ✅ | PDF briefing export |
+| `/api/intelligence/export/email` | POST | ✅ | Email digest |
 | `/api/feedback/sentiment` | POST | ✅ | Submit sentiment feedback |
 | `/api/feedback/impact` | POST | ✅ | Submit impact feedback |
 | `/api/feedback/stats` | GET | ✅ | Get feedback stats |
 | `/api/feedback/export` | GET | ✅ | Export feedback CSV |
-| `/api/intelligence/entity/:name` | GET | ✅ | Entity sentiment timeline |
-| `/api/intelligence/entities/top` | GET | ✅ | Top entities by mentions |
-| `/api/intelligence/backtest` | GET | ✅ | Hindsight validation results |
-| `/api/intelligence/backtest/run` | GET | ✅ | Trigger fresh backtest |
-| `/api/intelligence/market-data` | GET | ✅ | Cached market data |
-| `/api/intelligence/anomalies` | GET | ✅ | Volume anomaly alerts |
+
+---
+
+## 🎯 Milestone 12: Depth & Validation (DEPTH-VALIDATION-PLAN)
+**Status:** ✅ Completed (2026-02-20)
+**References:** [DEPTH-VALIDATION-PLAN.md](./DEPTH-VALIDATION-PLAN.md), [ARCHITECTURE.md](./ARCHITECTURE.md), [FEATURES.md](./FEATURES.md), [DECISIONS.md](./DECISIONS.md)
+
+### Task 1: Impact Score Weight Optimizer — Completed
+- [x] Grid search across ~100 valid weight combinations (all summing to 1.0)
+    - [x] [weight-optimizer.ts](../server/intelligence/validation/weight-optimizer.ts) — SQLite-backed optimizer
+- [x] Dynamic weight loading in `impact.ts` (hourly refresh, 7-day expiry)
+- [x] API endpoints: `GET /api/intelligence/optimize-weights`, `GET /api/intelligence/current-weights`
+- [x] HindsightValidator.tsx updated with weight optimization section
+
+### Task 2: Weekly Accuracy Scorecard — Completed
+- [x] Weekly reports comparing sentiment to market returns
+    - [x] [scorecard.ts](../server/intelligence/validation/scorecard.ts) — Letter grades A-F
+- [x] API endpoints: `GET /api/intelligence/scorecard`, `GET /api/intelligence/scorecard/history`
+- [x] [WeeklyScorecard.tsx](../client/src/components/intelligence/WeeklyScorecard.tsx) — Grade card + history tiles
+
+### Task 3: Fix Narrative Threading — Completed
+- [x] AND-based matching: entity overlap >= 2 AND keyword overlap >= 2 (was OR)
+- [x] Required: shared category, sentiment consistency (< 80 units difference)
+- [x] Minimum thread quality score of 10
+- [x] Thread lifecycle: 14-day max age, 5-day inactive = resolved
+- [x] Status column added to `narrative_threads` table
+- [x] NarrativeTimeline.tsx: active/resolved split with ThreadCard component
+
+### Task 4: "Today's Signal" Component — Completed
+- [x] Rule-based signal generator: GPR + sentiment + anomalies + top cluster
+    - [x] [signal.ts](../server/intelligence/synthesis/signal.ts)
+- [x] API endpoint: `GET /api/intelligence/signal`
+- [x] [TodaySignal.tsx](../client/src/components/intelligence/TodaySignal.tsx) — Sentiment badge, confidence level
+
+### Task 5: Pipeline Health Monitor — Completed
+- [x] Per-step timing and success/failure tracking
+    - [x] [health.ts](../server/intelligence/core/health.ts) — SQLite-backed health table
+- [x] Integrated into all 7 pipeline steps in `pipeline.ts`
+- [x] API endpoint: `GET /api/intelligence/health`
+
+### Task 6: Documentation Consolidation — Completed
+- [x] [ARCHITECTURE.md](./ARCHITECTURE.md) — Pipeline flow, layers, data flow, schema, API reference
+- [x] [FEATURES.md](./FEATURES.md) — Live feature registry
+- [x] [DECISIONS.md](./DECISIONS.md) — Design decision log with tradeoffs
+
+### Task 7: Dashboard Layout Reorder — Completed
+- [x] New order: TodaySignal → WeeklyScorecard → AnomalyBanner → Metrics → Intelligence Dashboard → Entities → Narratives → Validation → Executive Briefing → Clusters → Risks
+
