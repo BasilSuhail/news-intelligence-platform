@@ -11,10 +11,10 @@
  * → Displayed as a connected narrative: "This story has been developing for 5 days"
  *
  * Matching criteria (all must be met):
- * - Entity overlap >= 2 AND keyword overlap >= 2
+ * - Entity overlap >= 2 OR keyword overlap >= 3 (either signal is sufficient)
  * - At least 1 shared category
  * - Sentiment difference < 0.8 (same story, not unrelated coverage)
- * - Thread quality score >= 10
+ * - Thread quality score >= 8
  */
 
 import { ArticleCluster, NarrativeThread } from '../core/types';
@@ -23,7 +23,7 @@ import { storage } from '../core/storage';
 class NarrativeEngine {
   private static readonly MAX_THREAD_AGE_DAYS = 14;
   private static readonly INACTIVE_RESOLVE_DAYS = 5;
-  private static readonly MIN_THREAD_SCORE = 10;
+  private static readonly MIN_THREAD_SCORE = 8;
   private static readonly MAX_SENTIMENT_DIFF = 0.8;
 
   constructor() {
@@ -102,9 +102,10 @@ class NarrativeEngine {
         // Combined thread quality score
         const score = (entityOverlap * 3) + (keywordOverlap * 2) + (categoryMatch * 2);
 
-        // REQUIRE BOTH entity overlap AND keyword overlap (changed OR to AND)
-        // AND minimum thread score
-        if (entityOverlap >= 2 && keywordOverlap >= 2 && score >= NarrativeEngine.MIN_THREAD_SCORE) {
+        // Require strong entity overlap OR strong keyword overlap (either signal suffices)
+        const hasEntitySignal = entityOverlap >= 2;
+        const hasKeywordSignal = keywordOverlap >= 3;
+        if ((hasEntitySignal || hasKeywordSignal) && score >= NarrativeEngine.MIN_THREAD_SCORE) {
           if (!bestMatch || score > bestMatch.score) {
             bestMatch = { cluster: historical.cluster, score, date: historical.date };
           }
@@ -238,15 +239,25 @@ class NarrativeEngine {
   }
 
   /**
-   * Extract entity names from a cluster's articles
+   * Extract entity names from a cluster's articles.
+   * Falls back to topics + geo tags when NER entities aren't available.
    */
   private extractEntities(cluster: ArticleCluster): Set<string> {
     const entities = new Set<string>();
     for (const article of cluster.articles) {
-      if (!article.entities) continue;
-      for (const person of article.entities.people) entities.add(person.toLowerCase());
-      for (const org of article.entities.organizations) entities.add(org.toLowerCase());
-      for (const place of article.entities.places) entities.add(place.toLowerCase());
+      // Use NER entities when available
+      if (article.entities) {
+        for (const person of article.entities.people) entities.add(person.toLowerCase());
+        for (const org of article.entities.organizations) entities.add(org.toLowerCase());
+        for (const place of article.entities.places) entities.add(place.toLowerCase());
+      }
+      // Fallback: use topics and geo tags as pseudo-entities
+      if (article.topics) {
+        for (const topic of article.topics) entities.add(topic.toLowerCase());
+      }
+      if (article.geoTags) {
+        for (const tag of article.geoTags) entities.add(tag.toLowerCase());
+      }
     }
     return entities;
   }

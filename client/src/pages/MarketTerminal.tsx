@@ -12,7 +12,6 @@ import {
   BarChart2,
   Users,
   GitBranch,
-  ShieldCheck,
   FileText,
   Layers,
   Zap,
@@ -158,7 +157,6 @@ export default function MarketTerminal() {
     briefing: false,
     entities: true,
     narratives: false,
-    validator: false,
     alpha: false,
   });
 
@@ -224,6 +222,11 @@ export default function MarketTerminal() {
       label: "Weekly Accuracy",
     },
     {
+      id: "validator",
+      label: "Hindsight Validator",
+      badge: "Backtesting",
+    },
+    {
       id: "topicMap",
       label: "Topic Map",
       badge: briefing?.topClusters ? `${briefing.topClusters.length} clusters` : undefined,
@@ -259,11 +262,6 @@ export default function MarketTerminal() {
     {
       id: "narratives",
       label: "Developing Stories",
-    },
-    {
-      id: "validator",
-      label: "Hindsight Validator",
-      badge: "Backtesting",
     },
     {
       id: "alpha",
@@ -390,6 +388,11 @@ export default function MarketTerminal() {
             {/* ── ALWAYS VISIBLE: Weekly Scorecard ── */}
             <div data-toc-id="scorecard">
               <WeeklyScorecard />
+            </div>
+
+            {/* ── ALWAYS VISIBLE: Hindsight Validator (hero placement) ── */}
+            <div data-toc-id="validator">
+              <HindsightValidator />
             </div>
 
             {/* ─────────────────────────────────────
@@ -558,20 +561,6 @@ export default function MarketTerminal() {
             >
               <div className="pt-2">
                 <NarrativeTimeline />
-              </div>
-            </CollapsibleSection>
-
-            {/* Hindsight Validator */}
-            <CollapsibleSection
-              id="validator"
-              icon={<ShieldCheck className="w-4 h-4" />}
-              title="Hindsight Validator"
-              badge="Backtesting"
-              open={expanded.validator}
-              onToggle={() => toggle("validator")}
-            >
-              <div className="pt-2">
-                <HindsightValidator />
               </div>
             </CollapsibleSection>
 

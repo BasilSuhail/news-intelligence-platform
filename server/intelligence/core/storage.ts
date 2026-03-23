@@ -78,6 +78,7 @@ class IntelligenceStorage {
         impact_score REAL,
         geo_tags TEXT, -- JSON array
         topics TEXT,   -- JSON array
+        entities TEXT, -- JSON {people, organizations, places, topics}
         cluster_id TEXT,
         enriched_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
@@ -220,6 +221,18 @@ class IntelligenceStorage {
       }
     }
 
+    // Add entities column to enriched_articles if missing
+    const enrichedCols = this.db.prepare("PRAGMA table_info(enriched_articles)").all() as any[];
+    const enrichedColNames = new Set(enrichedCols.map((c: any) => c.name));
+    if (!enrichedColNames.has('entities')) {
+      console.log('[Storage] Adding missing column: enriched_articles.entities');
+      try {
+        this.db.exec('ALTER TABLE enriched_articles ADD COLUMN entities TEXT');
+      } catch (e) {
+        console.log('[Storage] Column entities already exists or error:', e);
+      }
+    }
+
     console.log('[Storage] Schema migrations complete');
   }
 
@@ -277,14 +290,15 @@ class IntelligenceStorage {
   saveEnrichedArticles(articles: EnrichedArticle[]): void {
     const upsert = this.db.prepare(`
       INSERT INTO enriched_articles (
-        id, raw_article_id, sentiment_score, sentiment_label, 
-        sentiment_confidence, sentiment_method, impact_score, 
-        geo_tags, topics, cluster_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, raw_article_id, sentiment_score, sentiment_label,
+        sentiment_confidence, sentiment_method, impact_score,
+        geo_tags, topics, entities, cluster_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         sentiment_score = excluded.sentiment_score,
         sentiment_label = excluded.sentiment_label,
         impact_score = excluded.impact_score,
+        entities = excluded.entities,
         cluster_id = excluded.cluster_id
     `);
 
@@ -300,6 +314,7 @@ class IntelligenceStorage {
           article.impactScore,
           JSON.stringify(article.geoTags),
           JSON.stringify(article.topics),
+          article.entities ? JSON.stringify(article.entities) : null,
           article.clusterId || null
         );
       }
@@ -501,6 +516,7 @@ class IntelligenceStorage {
       impactScore: row.impact_score,
       geoTags: JSON.parse(row.geo_tags),
       topics: JSON.parse(row.topics),
+      entities: row.entities ? JSON.parse(row.entities) : undefined,
       clusterId: row.cluster_id
     }));
   }

@@ -7,43 +7,60 @@ import { storage } from '../core/storage';
 
 /**
  * Market Intelligence - GPR Index Calculator
- * 
+ *
  * Quantifies global geopolitical anxiety based on news keyword frequency.
- * Implements weighted scoring per category.
+ * Calibrated so a typical news day lands in 30-50 (Stable/Elevated),
+ * genuine crises push 70+, and only concurrent multi-front escalation hits 90+.
  */
 export class GPRCalculator {
-    // Extensive Keyword Dictionary from Specification
+    // Pruned keyword dictionary — removed false-positive-prone words
+    // ("attack", "defense", "conflict", "battle", "combat", "weapon",
+    //  "threat", "protest", "condemn", "hostile", "denounce", "adversary")
+    // and eliminated cross-category duplicates.
     private static readonly KEYWORDS = {
-        military: ['war', 'warfare', 'military', 'troops', 'army', 'missile', 'nuclear', 'invasion', 'attack', 'airstrike', 'bombing', 'casualties', 'combat', 'conflict', 'battle', 'defense', 'weapon', 'drone strike', 'escalation'],
-        economic: ['sanctions', 'embargo', 'tariff', 'trade war', 'blacklist', 'export ban', 'import duty', 'economic warfare', 'blockade', 'currency manipulation', 'capital controls', 'asset freeze', 'trade restrictions', 'retaliatory'],
-        political: ['coup', 'overthrow', 'regime change', 'civil unrest', 'protest', 'riot', 'martial law', 'emergency powers', 'authoritarian', 'dictatorship', 'political crisis', 'impeachment', 'assassination', 'uprising'],
-        security: ['terrorism', 'terrorist', 'extremist', 'attack', 'bombing', 'hostage', 'kidnapping', 'assassination', 'insurgent', 'militia', 'radicalization', 'threat'],
-        diplomatic: ['diplomatic crisis', 'expel diplomats', 'recall ambassador', 'break relations', 'condemn', 'ultimatum', 'denounce', 'retaliate', 'provocation', 'hostile', 'adversary', 'confrontation', 'standoff', 'brinkmanship'],
-        regional: ['taiwan strait', 'south china sea', 'north korea', 'ukraine', 'crimea', 'gaza', 'west bank', 'iran nuclear', 'syria', 'yemen', 'kashmir', 'arctic dispute']
+        military: ['war', 'warfare', 'troops', 'army', 'missile', 'nuclear', 'invasion', 'airstrike', 'bombing', 'casualties', 'drone strike', 'escalation', 'military deployment', 'arms race'],
+        economic: ['sanctions', 'embargo', 'tariff', 'trade war', 'blacklist', 'export ban', 'economic warfare', 'blockade', 'currency manipulation', 'capital controls', 'asset freeze', 'trade restrictions'],
+        political: ['coup', 'overthrow', 'regime change', 'civil unrest', 'riot', 'martial law', 'emergency powers', 'political crisis', 'assassination', 'uprising'],
+        security: ['terrorism', 'terrorist', 'extremist', 'hostage', 'kidnapping', 'insurgent', 'militia', 'radicalization'],
+        diplomatic: ['diplomatic crisis', 'expel diplomats', 'recall ambassador', 'break relations', 'ultimatum', 'retaliate', 'provocation', 'confrontation', 'standoff', 'brinkmanship'],
+        regional: ['taiwan strait', 'south china sea', 'north korea', 'ukraine war', 'crimea', 'gaza', 'west bank', 'iran nuclear', 'yemen', 'kashmir']
     };
 
     private static readonly WEIGHTS: Record<string, number> = {
-        'nuclear': 3.0, 'invasion': 3.0, 'missile strike': 3.0,
-        'sanctions': 2.0, 'military deployment': 2.0, 'coup': 2.0, 'terrorism': 2.0,
-        'tariff': 1.5, 'trade war': 1.5, 'diplomatic crisis': 1.5, 'protests': 1.5
+        'nuclear': 3.0, 'invasion': 3.0, 'missile': 2.5, 'airstrike': 2.5,
+        'sanctions': 2.0, 'military deployment': 2.0, 'coup': 2.0, 'terrorism': 2.0, 'war': 2.0,
+        'tariff': 1.5, 'trade war': 1.5, 'diplomatic crisis': 1.5, 'embargo': 1.5,
+        'escalation': 1.5, 'martial law': 1.5, 'assassination': 1.5
     };
 
-    private static readonly NORMALIZATION_FACTOR = 2.5;
+    // Max weighted score any single article can contribute (prevents outlier inflation)
+    private static readonly MAX_ARTICLE_SCORE = 4;
 
     /**
-     * Calculate GPR for a specific day
+     * Calculate GPR for a specific day.
+     *
+     * Uses a two-signal blend:
+     *   intensity  — log-dampened average keyword weight per article (caps runaway scores)
+     *   breadth    — fraction of articles that contain any geopolitical keyword
+     *
+     * Calibration targets (with pruned keywords):
+     *   Quiet day  → 20-35   Stable Market
+     *   Normal     → 35-55   Elevated Risk (low end)
+     *   Heated     → 55-70   Elevated Risk (high end)
+     *   Crisis     → 70-85   Extreme Anxiety
+     *   Multi-front→ 85-100  Extreme Anxiety (peak)
      */
     public calculateDaily(articles: EnrichedArticle[], date: string): GPRDataPoint {
         const keywordCounts: Record<string, number> = {};
-        let totalWeightedMatches = 0;
+        let cappedWeightedTotal = 0;
         let articlesWithMatches = 0;
 
         for (const article of articles) {
             const text = `${article.title} ${article.description || ''}`.toLowerCase();
+            let articleScore = 0;
             let matched = false;
 
-            // Group all keywords for counting
-            for (const [category, keywords] of Object.entries(GPRCalculator.KEYWORDS)) {
+            for (const [_category, keywords] of Object.entries(GPRCalculator.KEYWORDS)) {
                 for (const word of keywords) {
                     const regex = new RegExp(`\\b${word}\\b`, 'gi');
                     const matches = (text.match(regex) || []).length;
@@ -51,18 +68,27 @@ export class GPRCalculator {
                     if (matches > 0) {
                         keywordCounts[word] = (keywordCounts[word] || 0) + matches;
                         const weight = GPRCalculator.WEIGHTS[word] || 1.0;
-                        totalWeightedMatches += matches * weight;
+                        articleScore += matches * weight;
                         matched = true;
                     }
                 }
             }
 
+            // Cap per-article contribution to prevent a single article from dominating
+            cappedWeightedTotal += Math.min(articleScore, GPRCalculator.MAX_ARTICLE_SCORE);
             if (matched) articlesWithMatches++;
         }
 
-        // Normalize score: (Weighted Matches / Total Articles) * 100 * Normalization
-        const rawScore = articles.length > 0 ? (totalWeightedMatches / articles.length) * 100 : 0;
-        const score = Math.min(100, Math.round(rawScore * GPRCalculator.NORMALIZATION_FACTOR));
+        // Two-signal scoring with logarithmic dampening
+        const avgIntensity = articles.length > 0 ? cappedWeightedTotal / articles.length : 0;
+        const breadthRatio = articles.length > 0 ? articlesWithMatches / articles.length : 0;
+
+        // log1p(x*8)*22: 0.3→27, 0.6→37, 1.2→49, 2.5→63, 4.0→72
+        // breadth*20:    0.2→4,  0.35→7, 0.5→10, 0.7→14, 0.9→18
+        const intensityComponent = Math.log1p(avgIntensity * 8) * 22;
+        const breadthComponent = breadthRatio * 20;
+
+        const score = Math.min(100, Math.round(intensityComponent + breadthComponent));
 
         const topKeywords = Object.entries(keywordCounts)
             .sort((a, b) => b[1] - a[1])
