@@ -366,6 +366,14 @@ Get sentiment timeline for a named entity.
 
 ---
 
+## 🚀 Roadmap
+- [ ] **Real-time News Streaming**: Transition from polling to WebSocket-based updates.
+- [ ] **Enhanced Clustering**: Improved narrative threading across longer time horizons.
+- [ ] **Multi-Language Support**: Processing and analyzing news in multiple languages.
+- [ ] **Mobile App**: A dedicated mobile application for real-time alerts and briefings.
+
+---
+
 ## 🤝 Why This Project Exists
 
 I built this platform to demonstrate that **sophisticated financial intelligence doesn't require expensive enterprise tools**. With the right architecture:
