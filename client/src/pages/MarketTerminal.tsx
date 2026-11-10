@@ -277,7 +277,7 @@ export default function MarketTerminal() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-neutral-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[#efece3] dark:bg-neutral-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin inline-block size-8 border-[3px] border-current border-t-transparent text-violet-500 rounded-full mb-4" />
           <p className="text-sm text-gray-500 dark:text-neutral-500">Decrypting Market Signals...</p>
@@ -287,7 +287,7 @@ export default function MarketTerminal() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950">
+    <div className="min-h-screen bg-[#efece3] dark:bg-neutral-950">
       {/* Reactive Table of Contents */}
       <TerminalTOC
         sections={tocSections}
